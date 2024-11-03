@@ -1,0 +1,140 @@
+<!doctype html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Socket.IO chat</title>
+    <style>
+      body {
+        margin: 0;
+        padding-bottom: 3rem;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Helvetica, Arial, sans-serif;
+      }
+
+      #form {
+        background: rgba(0, 0, 0, 0.15);
+        padding: 0.25rem;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        display: flex;
+        height: 3rem;
+        box-sizing: border-box;
+        backdrop-filter: blur(10px);
+      }
+      #input {
+        border: none;
+        padding: 0 1rem;
+        flex-grow: 1;
+        border-radius: 2rem;
+        margin: 0.25rem;
+      }
+      #input:focus {
+        outline: none;
+      }
+      #form > button {
+        background: #333;
+        border: none;
+        padding: 0 1rem;
+        margin: 0.25rem;
+        border-radius: 3px;
+        outline: none;
+        color: #fff;
+      }
+
+      #messages {
+        list-style-type: none;
+        margin: 0;
+        padding: 0;
+      }
+      #messages > li {
+        padding: 0.5rem 1rem;
+      }
+      #messages > li:nth-child(odd) {
+        background: #efefef;
+      }
+    </style>
+  </head>
+
+  <body>
+    <ul id="messages"></ul>
+    <form id="form" method="get" action="">
+      <input id="input" autocomplete="off" /><button>Send</button>
+
+      <!-- #6 CONNECTION STATE RECOVERY -->
+      <button id="toggle-btn">Disconnect</button>
+    </form>
+  </body>
+  <!--#3 INTEGRATIN SOCKET.IO -->
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    //#2 SERVING HTML
+    // const socket = io();
+
+    //#8 CLIENT DELIVERY
+    let counter = 0;
+
+    //#7 SERVER DELIVERY
+    const socket = io({
+      auth: {
+        serverOffset: 0,
+      },
+
+      //#8 CLIENT DELIVERY
+      //enable retries
+      ackTimeout: 10000,
+      retries: 3,
+    });
+
+    const form = document.getElementById("form");
+    const input = document.getElementById("input");
+
+    ////#5 BROADCASTING
+    const messages = document.getElementById("messages");
+
+    console.log(form, input);
+
+    //#4 EMITTING EVENTS
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      if (input.value) {
+        //#8 CLIENT DELIVERY
+        //computer a unique offset
+        const clientOffset = `${socket.id}-${counter++}`;
+        // socket.emit("chat message", input.value);
+        //#8 CLIENT DELIVERY
+        socket.emit("chat message", input.value, clientOffset);
+        input.value = "";
+      }
+    });
+
+    //#5 BROADCASTING
+    //CATPURE THE 'chat message' event in the index.js socket
+    // socket.on("chat message", (msg) => {
+
+    //#7 SERVER DELIVERY
+    socket.on("chat message", (msg, serverOffset) => {
+      const item = document.createElement("li");
+      item.textContent = msg;
+      messages.append(item);
+      //#7 SERVER DELIVERY
+      window.scrollTo(0, document.body.scrollHeight);
+      socket.auth.serverOffset = serverOffset;
+    });
+
+    //#6 CONNECTION STATE RECOVERY
+    const toggleButton = document.getElementById("toggle-btn");
+
+    toggleButton.addEventListener("click", (e) => {
+      e.preventDefault();
+      if (socket.connected) {
+        toggleButton.innerText = "Connect";
+        socket.disconnect();
+      } else {
+        toggleButton.innerText = "Disconnect";
+        socket.connect();
+      }
+    });
+  </script>
+</html>
